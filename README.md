@@ -1,86 +1,71 @@
-# Wallpaper Engine 壁纸图片提取工具
+# 壁纸提取器
 
-从 Wallpaper Engine 壁纸包 (`scene.pkg` / `scene.mpkg` / `.mkg`) 中提取全部图片(JPEG/PNG 内嵌纹理 + DXT/LZ4 等 GPU 压缩纹理),以及包内直接存放的普通图片和视频;网页型壁纸则直接收集散放的图片;也支持单独拖入 `.tex` 纹理文件。
+把 Wallpaper Engine 壁纸包里的图片提取出来，存成普通图片文件（JPG、PNG 等），方便查看、收藏或当素材用。
 
-**动图支持**: GIF、动图 WebP、APNG、AVIF 等常见动图格式——散放图片和包内直接存放的动图原样提取(保留动画),`.tex` 纹理内嵌的动图也会按签名识别提取。
+Windows 桌面程序，有图形界面，也有命令行版本。
 
-## 桌面 App（图形界面）
+## 能做什么
 
-双击 `壁纸提取器.exe` 即可打开图形界面（单文件版，无需安装 Python；首次运行如遇 SmartScreen 提示，点「更多信息 → 仍要运行」）。也可以用 `启动壁纸提取器.bat` 或 `python wall_app.py` 运行源码版（需先 `python -m pip install PySide6-Essentials`）。
+- 支持 Wallpaper Engine 的 `scene.pkg`、`scene.mpkg`、`.mkg` 壁纸包，也支持单独的 `.tex` 纹理文件
+- 网页型壁纸会直接收集里面的图片
+- 普通图片、视频、动图（GIF、动图 WebP、APNG、AVIF）会原样提取，动画不会被拆掉
+- 游戏用的 GPU 压缩纹理（DXT、LZ4 等）会自动转成正常图片
+- 提取结果按壁纸分文件夹存放；重复提取会自动跳过，不会存出一堆重复文件
 
-> 如果系统开启了 **Smart App Control**（Windows 安全中心 → 应用和浏览器控制 → 智能应用控制），未签名的 `壁纸提取器.exe` 会被系统直接拦截。此时请用 `启动壁纸提取器.bat` 或桌面快捷方式运行源码版（功能完全相同），或在确认风险后关闭 Smart App Control（注意：关闭后通常需要重装系统才能重新开启）。
+## 怎么用
 
-- exe 需与 `extract-wallpaper.ps1`、`repkg\` 放在同一文件夹（当前布局已满足，可整体移动）
-- 更新程序后重新打包：`python -m PyInstaller --noconfirm --distpath . 壁纸提取器.spec`
+### 图形界面（推荐）
 
-- 顶栏包含「导入壁纸包」「最近提取」「输出目录」「多选」「主题」「设置」；筛选栏提供分组标签 + **文件名搜索（Ctrl+F，Esc 清空）**，缩略图以瀑布流卡片排列
-- 把 `scene.pkg` / `.mpkg` / `.mkg` / `.tex` / **壁纸文件夹** 拖进窗口任意位置即开始提取；支持一次拖多个，自动排队，提取过的自动跳过；没有内容时显示引导按钮和输出目录
-- 提取结果按包分组展示（一个包文件夹 = 一段，互不混排），**双击用系统默认看图应用打开**；悬停缩略图可直接「壁纸 / 全屏 / 删除」，回车进入应用内全屏翻看（← → 切换、Esc 退出、右键更多操作），可 另存为 / 复制 / 设为桌面壁纸 / 删除（进回收站）
-- 顶栏「☑ 多选」进入多选模式：单击缩略图勾选（✓ 角标）、文件夹名字右侧「全选」一键勾选本组、底部操作条批量删除（进回收站）；Ctrl+A 全选可见组，Esc 或「完成」退出
-- **空文件夹自动清理**：输出目录里的子文件夹如果已经没有任何图片/视频（递归判断，masks 子目录里的 png 算图片），会在启动时、每次提取完成后、以及应用内把某组删空时自动移入回收站（可还原），界面与状态栏均有提示。**只对确认属于本工具的目录生效**：默认输出目录，或目录里有 `.wall_extractor_out` 标记；自定义输出目录在首次产出后会写入该标记，避免误清无关空文件夹
-- 顶栏右侧 🌙 / ☀ 切换 深色 / 浅色 主题（标题栏颜色跟随主题）；⚙ 里可改输出目录、**并行提取数（自动 / 1–8）**、显示提取日志
-- **并行提取**：最多同时跑 N 个引擎进程（自动值 = 物理核的一半并按内存总量收口，单包时退化为 1 个；⚙ 里可手动指定 1–8）。调度是流式的：哪个进程先空出来就立刻领下一个包，大包优先，同一输出目录的包强制同批串行，多包时能明显缩短总耗时
-- **同卷临时目录**：RePKG 解出的图片先落在输出根目录下的隐藏临时目录（`.wall_tmp_*`），再改名移动到结果目录；输出到其他盘时不再整包复制
-- **界面/性能**：瀑布流缩略图 + 圆角卡片 + 悬停快捷操作（壁纸/全屏/删除）+ 空状态引导；缩略图懒加载 + 磁盘缓存（重启不再重新解码）、提取中合并刷新（不再每完成一个包整页跳一次）、日志批量渲染、缩略图解码线程限流（提取时给引擎让核）；全屏预览为浮动工具栏（← → 切换 / Esc 关闭）
-- 完全复用 `extract-wallpaper.ps1` + `RePKG.exe` 引擎，输出目录与命令行方式共用（默认 `已提取图片`）
-- 首次使用需安装界面库：`python -m pip install PySide6-Essentials`（exe 版无需）
+1. 双击 `壁纸提取器.exe`
+2. 把壁纸包（或整个壁纸文件夹）拖进窗口，自动开始提取
+3. 提取完的图片按壁纸分文件夹放在 `已提取图片\` 里
 
-## 文件夹结构
+界面里可以直接预览、全屏看、设置成桌面壁纸，也支持多选批量删除。
 
-以下文件互相按「同目录」引用（exe 运行时找同目录的 `extract-wallpaper.ps1` 和 `repkg\`，两个 bat 用 `%~dp0` 找同目录脚本，spec 引用 `wall_app.py` 和 `icon.ico`），**请保持在根目录原位，可整体移动但不能单独挪走**：
+第一次打开如果 Windows 弹出 SmartScreen 提示，点「更多信息 → 仍要运行」就行，程序本身没问题。
 
-| 文件/文件夹 | 作用 |
-| --- | --- |
-| `壁纸提取器.exe` | 图形界面 App（未签名；若被 Smart App Control 拦截请用 `启动壁纸提取器.bat` / 桌面快捷方式） |
-| `extract-wallpaper.ps1` + `repkg\` | 提取引擎（exe / bat / App 共用） |
-| `wall_app.py` + `启动壁纸提取器.bat` | 源码版入口（需 PySide6-Essentials；桌面快捷方式指向它） |
-| `提取壁纸图片.bat` | 命令行入口（可拖拽包文件到它上面） |
-| `壁纸提取器.spec` + `icon.ico` | 重新打包 App 用：`python -m PyInstaller --noconfirm --distpath . 壁纸提取器.spec` |
-| `已提取图片\` | 输出目录（与命令行方式共用；根目录下的 `.wall_extractor_out` 是"允许自动清理空文件夹"的标记，勿删） |
+### 源码版
 
-- `归档\`：不影响运行的杂物——开发/诊断脚本（`bench_render.py`、`diag_explorer_hang.py`）、引擎与 App 的 `.bak-20261003` 回退备份。其中 `归档\e2e\` 是合成 PKG/TEX 端到端回归（13 用例，`python 归档\e2e\run_e2e.py --label after-change` 一键重跑，只写 `归档\e2e\`）。备份如需回退，**先复制回根目录再用**（引擎按自己所在目录找 `repkg\`）。
-- `__pycache__`、`build`、`ui-preview` 是可再生成的产物（运行/打包/selftest 自动重建），删除无影响。`ui-preview\_selftest_cfg\` 是 `--selftest` 的隔离配置，不会碰真实用户配置。
+需要先装 Python 和界面库 `PySide6-Essentials`，然后双击 `启动壁纸提取器.bat`，或者：
 
-## 用法
-
-| 方式 | 操作 |
-| --- | --- |
-| 拖拽 | 把壁纸文件夹(或 `scene.pkg` / `scene.mpkg` / `.tex` 文件)拖到 `提取壁纸图片.bat` 上 |
-| 双击 | 双击 `提取壁纸图片.bat`,自动扫描本文件夹及子文件夹中的包文件 |
-| 命令行 | `powershell -ExecutionPolicy Bypass -File extract-wallpaper.ps1 "路径"` |
-
-输出统一保存到工具目录下的 `已提取图片\<壁纸文件夹名>\`,重复运行自动跳过已提取过的壁纸,不会产生重复图片。
-
-## 可选参数
-
-| 参数 | 作用 |
-| --- | --- |
-| `-Force` | 输出文件夹已存在时也重新提取(默认跳过已提取过的壁纸) |
-| `-NoOpen` | 提取结束后不自动打开资源管理器窗口 |
-| `-OutDir <目录>` | 自定义输出根目录(默认: 工具目录下的 `已提取图片`) |
-
-示例:
-
-```powershell
-# 重新提取并输出到 D:\壁纸输出
-powershell -ExecutionPolicy Bypass -File extract-wallpaper.ps1 -Force -NoOpen -OutDir "D:\壁纸输出" "C:\Wallpapers\MyWall"
+```
+python wall_app.py
 ```
 
-## 自测
+功能和 exe 版完全一样。如果系统开了「智能应用控制」（Smart App Control），exe 会被系统直接拦下，用这个方式运行即可。
+
+### 命令行
+
+把壁纸包拖到 `提取壁纸图片.bat` 上，或者在 PowerShell 里：
 
 ```powershell
-python wall_app.py --test-empty   # 空文件夹清扫逻辑（无头，用临时目录 + 假回收站）
-python wall_app.py --test-sched   # 并行度解析 / 写冲突分批 / 队列去重 / 缩略图缓存键（无头）
-python wall_app.py --smoke        # PowerShell 中文输出解码链路
-python wall_app.py --selftest     # 用演示数据生成 ui-preview 截图（会短暂弹窗）
+powershell -ExecutionPolicy Bypass -File extract-wallpaper.ps1 "壁纸包路径"
 ```
 
-## 实现说明
+常用参数：
 
-- **并行调度**: App 最多同时跑「物理核数的一半」个引擎进程（1–8，按内存总量收口，可在 ⚙ 里改成固定值）。调度是流式的：任一批跑完立即补位；同一输出目录（同名壁纸文件夹）的包强制放进同一批串行处理，避免并发写冲突；批次大小受 Windows 命令行长度限制（≤40 项 / ≤20000 字符）。
-- **同卷临时目录**: RePKG 先解到输出根目录下的隐藏目录 `.wall_tmp_<guid>`，再改名移动到结果目录，输出到别的盘时不用整包复制；崩溃残留超过 6 小时会在下次启动时清理。
-- **RePKG 引擎优先**: 内置 `repkg\RePKG.exe`(支持 DXT/LZ4 等 GPU 压缩纹理转换);`mpkg/mkg` 通过硬链接(同盘)或复制(跨盘)转成 `.pkg` 后调用。
-- **内置解析后备**: RePKG 不可用时,内置解析器支持 JPEG/PNG/GIF/WebP/AVIF 内嵌图片(含动图)、包内普通图片/视频/音频;采用**流式读取**,不会把整个大包读入内存。
-- **防重名**: 路径折叠导致的重名文件自动加 `_2` `_3` 后缀,不再静默覆盖。
-- **提取进程崩溃**: 未完成的包会自动重试一次，仍失败才标为失败，不会谎报完成。
-- RePKG 引擎来自 https://github.com/notnotnotswipez/RePKG ,第三方组件清单见 `repkg\THIRD-PARTY-NOTICES.txt`。
+- `-Force`：重新提取（默认跳过已经提取过的壁纸）
+- `-OutDir "D:\输出目录"`：换个输出位置（默认是程序目录下的 `已提取图片`）
+- `-NoOpen`：提取完不自动打开文件夹
+
+## 文件说明
+
+| 文件 / 文件夹 | 作用 |
+| --- | --- |
+| `壁纸提取器.exe` | 图形界面程序，双击就用（未签名） |
+| `启动壁纸提取器.bat`、`wall_app.py` | 源码版入口，需要 Python + PySide6 |
+| `提取壁纸图片.bat`、`extract-wallpaper.ps1` | 命令行提取入口 |
+| `repkg\` | 提取引擎，exe 和脚本都靠它 |
+| `壁纸提取器.spec`、`icon.ico` | 重新打包 exe 时用 |
+
+这些文件需要放在同一个文件夹里（现在这样整体复制就行），不要单独挪走某一个。
+
+## 自己重新打包（可选）
+
+```
+python -m PyInstaller --noconfirm --distpath . 壁纸提取器.spec
+```
+
+## 致谢
+
+提取引擎用到了 [RePKG](https://github.com/notnotnotswipez/RePKG)，第三方组件说明见 `repkg\THIRD-PARTY-NOTICES.txt`。
