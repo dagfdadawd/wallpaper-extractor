@@ -1,0 +1,14 @@
+# 可再生成的本地产物
+__pycache__/
+*.pyc
+build/
+dist/
+ui-preview/
+已提取图片/
+.wall_tmp_*/
+.wall_extractor_out
+
+# 开发备份 / 诊断 / 本地快捷方式（不进仓库）
+归档/
+*.lnk
+*.tmp
